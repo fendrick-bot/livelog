@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Format, lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Server integration tests run against an in-process Postgres (PGlite): no service needed.
+      - run: npm test
+
+  database:
+    name: Migrations on real Postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: livelog
+          POSTGRES_PASSWORD: livelog
+          POSTGRES_DB: livelog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U livelog -d livelog"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_DRIVER: pg
+      DATABASE_URL: postgres://livelog:livelog@localhost:5432/livelog
+      JWT_ACCESS_SECRET: ci-only-secret-that-is-long-enough-to-pass-validation
+      ADMIN_EMAIL: admin@livelog.ci
+      ADMIN_PASSWORD: ci-password-123
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Schema and committed migrations are in sync
+        run: |
+          npm run db:generate -- --name ci_drift_check
+          if [ -n "$(git status --porcelain apps/server/drizzle)" ]; then
+            echo "::error::The Drizzle schema changed without a migration. Run 'npm run db:generate' and commit the result."
+            git status --porcelain apps/server/drizzle
+            exit 1
+          fi
+      - run: npm run db:check
+      - name: Apply migrations
+        run: npm run db:migrate
+      - name: Migrations are idempotent
+        run: npm run db:migrate
+      - name: Seed
+        run: npm run db:seed
+
+  build:
+    name: Build
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: livelog-build
+          path: |
+            apps/web/dist
+            apps/server/dist
+            apps/server/drizzle
+          retention-days: 7
+
+  docker:
+    name: Docker image
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: livelog:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

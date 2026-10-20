@@ -1,0 +1,47 @@
+{
+  "name": "livelog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A diary you can watch being written, live.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c yellow,cyan \"npm run dev -w @livelog/server\" \"npm run dev -w @livelog/web\"",
+    "build": "npm run build -w @livelog/web && npm run build -w @livelog/server",
+    "start": "npm run start -w @livelog/server",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "db:generate": "npm run db:generate -w @livelog/server",
+    "db:migrate": "npm run db:migrate -w @livelog/server",
+    "db:seed": "npm run db:seed -w @livelog/server",
+    "db:studio": "npm run db:studio -w @livelog/server",
+    "db:check": "npm run db:check -w @livelog/server",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5"
+  }
+}

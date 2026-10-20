@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.pglite
+**/coverage
+.git
+.github
+.husky
+.claude
+.env
+.env.*
+!.env.example
+*.log
