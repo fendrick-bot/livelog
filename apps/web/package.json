@@ -14,7 +14,7 @@
     "@livelog/shared": "*",
     "@tanstack/react-query": "^5.104.3",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.59.0",
+    "lucide-react": "^1.61.0",
     "motion": "^14.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
