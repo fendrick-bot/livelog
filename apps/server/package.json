@@ -17,7 +17,7 @@
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.10",
+    "@electric-sql/pglite": "^0.5.11",
     "@livelog/shared": "*",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
